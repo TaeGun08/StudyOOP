@@ -1,5 +1,0 @@
-namespace Study.OOP
-{
-    
-};
-
