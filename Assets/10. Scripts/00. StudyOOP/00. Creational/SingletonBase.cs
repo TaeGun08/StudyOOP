@@ -1,26 +1,19 @@
+﻿using System;
 using UnityEngine;
 
 namespace Study.OOP
 {
     public class GameManager : SingletonBase<GameManager>
     {
-        public int Level { get; private set; } = 1;
+        public int Level;
     }
 
-    public class NotePad
-    {
-        private void Test()
-        {
-            int curLevel = GameManager.Instance.Level;
-        }
-    }
-    
     public abstract class SingletonBase<T> : MonoBehaviour where T : MonoBehaviour
     {
         protected static T instance;
-        private static readonly object lockObj = new();
-        private static bool applicationIsQuitting;
-        private static bool isInitialized;
+        private static readonly object lockObj = new object();
+        private static bool applicationIsQuitting = false;
+        private static bool isInitialized = false;
 
         public static bool IsInitialized => isInitialized && instance != null;
         
@@ -36,18 +29,20 @@ namespace Study.OOP
 
                 lock (lockObj)
                 {
-                    if (instance != null) return instance;
-                    instance = FindFirstObjectByType<T>();
-
                     if (instance == null)
                     {
-                        var singletonObject = new GameObject(typeof(T).Name);
-                        instance = singletonObject.AddComponent<T>();
-                        DontDestroyOnLoad(singletonObject);
-                    }
+                        instance = FindObjectOfType<T>();
 
-                    (instance as SingletonBase<T>)?.OnInitialize();
-                    isInitialized = true;
+                        if (instance == null)
+                        {
+                            var singletonObject = new GameObject(typeof(T).Name);
+                            instance = singletonObject.AddComponent<T>();
+                            DontDestroyOnLoad(singletonObject);
+                        }
+
+                        (instance as SingletonBase<T>)?.OnInitialize();
+                        isInitialized = true;
+                    }
 
                     return instance;
                 }
@@ -78,11 +73,13 @@ namespace Study.OOP
 
         protected virtual void OnDestroy()
         {
-            if (instance != this) return;
-            OnDispose();
-            instance = null;
-            isInitialized = false;
-            applicationIsQuitting = true;
+            if (instance == this)
+            {
+                OnDispose();
+                instance = null;
+                isInitialized = false;
+                applicationIsQuitting = true;
+            }
         }
 
         /// <summary>
@@ -100,17 +97,19 @@ namespace Study.OOP
         /// </summary>
         public static void ResetInstance()
         {
-            if (instance == null) return;
-            (instance as SingletonBase<T>)?.OnDispose();
+            if (instance != null)
+            {
+                (instance as SingletonBase<T>)?.OnDispose();
 
 #if UNITY_EDITOR
-            DestroyImmediate((instance as MonoBehaviour)?.gameObject);
+                DestroyImmediate((instance as MonoBehaviour)?.gameObject);
 #else
                 Destroy((_instance as MonoBehaviour)?.gameObject);
 #endif
-            instance = null;
-            isInitialized = false;
-            applicationIsQuitting = false;
+                instance = null;
+                isInitialized = false;
+                applicationIsQuitting = false;
+            }
         }
     }
 }
